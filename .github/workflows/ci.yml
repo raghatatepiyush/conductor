@@ -1,0 +1,232 @@
+name: CI
+
+# Conductor's safety rails are only worth as much as their proof. This workflow
+# runs the adversarial guardrails battery on every push and PR, across the three
+# OSes Conductor claims to support (Linux, Windows, macOS) and a span of Python
+# versions — so the "hard, hook-enforced, cross-platform" promise in the README
+# is continuously *verified*, not just asserted. The hooks are standard-library
+# only, so there is nothing to install.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+# A newer push to the same ref supersedes an in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  guardrails:
+    name: guardrails battery (${{ matrix.os }} · py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Min supported (3.9) → latest (3.14). The hooks are stdlib-only, so the
+        # version span guards against syntax/stdlib drift, and the OS span proves
+        # the cross-platform claim (incl. Windows console encoding handling).
+        python-version: ["3.9", "3.11", "3.13", "3.14"]
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Show interpreter
+        run: python --version
+
+      - name: Validate JSON manifests
+        shell: python
+        run: |
+          import json, sys
+          for path in (".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", "hooks/hooks.json"):
+              with open(path, encoding="utf-8") as fh:
+                  json.load(fh)
+              print(f"OK  {path}")
+
+      - name: Run the guardrails adversarial battery
+        run: python hooks/test_guardrails.py
+
+      - name: Run the ledger battery
+        run: python hooks/test_ledger.py
+
+      - name: Run the routing battery
+        run: python hooks/test_routing.py
+
+      - name: Smoke-test the ledger CLI (validate / next / board / gate)
+        shell: python
+        run: |
+          # Prove the ledger CLI works end to end on every OS (it backs /conductor:pickup and the board).
+          import json, os, subprocess, sys, tempfile
+
+          full_gate = {"correct": True, "secure": True, "clean": True,
+                       "complete": True, "documented": True, "explained": True}
+          state = {"schemaVersion": 2, "project": "x", "updated": "now", "goal": "g",
+                   "tasks": [
+                       {"id": "T1", "status": "done", "priority": 1, "dependsOn": [],
+                        "assignee": "principal", "gate": full_gate},
+                       {"id": "T2", "status": "pending", "priority": 1, "dependsOn": ["T1"],
+                        "assignee": "engineer:api"},
+                   ]}
+          fd, path = tempfile.mkstemp(suffix=".json")
+          with os.fdopen(fd, "w", encoding="utf-8") as fh:
+              json.dump(state, fh)
+
+          # path goes after the subcommand
+          def runp(sub, *extra):
+              # ledger.py reconfigures its stdout to UTF-8 (the board renders with
+              # box-drawing/emoji glyphs), so decode the capture as UTF-8 explicitly —
+              # otherwise text=True falls back to the Windows locale (cp1252) and
+              # chokes on those bytes.
+              proc = subprocess.run([sys.executable, "hooks/ledger.py", sub, path, *extra],
+                                    capture_output=True, text=True,
+                                    encoding="utf-8", errors="replace")
+              return proc.returncode, proc.stdout.strip()
+
+          rc_v, out_v = runp("validate")
+          rc_n, out_n = runp("next")
+          rc_b, out_b = runp("board")
+          rc_g1, out_g1 = runp("gate", "T1")   # PASS -> exit 0
+          rc_g2, out_g2 = runp("gate", "T2")   # FAIL -> exit 1
+          os.remove(path)
+          assert rc_v == 0 and out_v == "valid", ("validate", rc_v, out_v)
+          assert rc_n == 0 and out_n == "T2", ("next", rc_n, out_n)
+          assert rc_b == 0 and "engineer:api" in out_b, ("board", rc_b, out_b)
+          assert rc_g1 == 0 and out_g1.startswith("PASS"), ("gate T1", rc_g1, out_g1)
+          assert rc_g2 == 1 and out_g2.startswith("FAIL"), ("gate T2", rc_g2, out_g2)
+          print("ledger CLI smoke: validate / next=T2 / board / gate PASS+FAIL all correct")
+
+      - name: Smoke-test the Stop gate (blocks failing gate, allows clean stop)
+        shell: python
+        run: |
+          # The Stop hook must block finishing while an in-progress task's gate is
+          # recorded failing, and must NOT trap when there is nothing failing.
+          import json, os, subprocess, sys, tempfile
+
+          d = tempfile.mkdtemp()
+          os.makedirs(os.path.join(d, ".conductor"), exist_ok=True)
+          hook = os.path.abspath("hooks/stop_gate.py")
+
+          def run(state):
+              with open(os.path.join(d, ".conductor", "state.json"), "w", encoding="utf-8") as fh:
+                  json.dump(state, fh)
+              proc = subprocess.run([sys.executable, hook],
+                                    input='{"stop_hook_active": false}',
+                                    capture_output=True, text=True,
+                                    encoding="utf-8", errors="replace", cwd=d)
+              assert proc.returncode == 0, f"stop hook exited {proc.returncode}: {proc.stderr}"
+              out = proc.stdout.strip()
+              return json.loads(out)["decision"] if out else "allow"
+
+          failing = run({"schemaVersion": 2, "tasks": [
+              {"id": "T1", "status": "in_progress", "gate": {"secure": False}}]})
+          clean = run({"schemaVersion": 2, "tasks": [
+              {"id": "T1", "status": "in_progress"}]})  # no gate recorded -> must not trap
+          assert failing == "block", ("expected block on failing gate", failing)
+          assert clean == "allow", ("expected allow when no gate recorded", clean)
+          print("stop gate smoke: blocks recorded-failing gate, never traps an absent one")
+
+      - name: Smoke-test the hook over stdin (deny / ask / allow)
+        shell: python
+        run: |
+          # Exercise the real invocation path: JSON on stdin -> a PreToolUse
+          # decision (or clean exit for allow). Asserts the three outcomes end to
+          # end, so a regression in the I/O wiring (not just classify*) is caught.
+          import json, subprocess, sys
+
+          def decision(payload):
+              proc = subprocess.run(
+                  [sys.executable, "hooks/guardrails.py"],
+                  input=json.dumps(payload),
+                  capture_output=True, text=True,
+                  encoding="utf-8", errors="replace",
+              )
+              assert proc.returncode == 0, f"hook exited {proc.returncode}: {proc.stderr}"
+              out = proc.stdout.strip()
+              if not out:
+                  return "allow"
+              return json.loads(out)["hookSpecificOutput"]["permissionDecision"]
+
+          cases = [
+              ({"tool_name": "Bash", "tool_input": {"command": "git commit -m x"}}, "deny"),
+              ({"tool_name": "Bash", "tool_input": {"command": "gh pr create --fill"}}, "ask"),
+              ({"tool_name": "Bash", "tool_input": {"command": "npm test"}}, "allow"),
+              ({"tool_name": "mcp__plugin_supabase_supabase__execute_sql",
+                "tool_input": {"environment": "production"}}, "deny"),
+              ({"tool_name": "mcp__plugin_github_github__create_pull_request",
+                "tool_input": {"title": "x"}}, "ask"),
+              ({"tool_name": "mcp__plugin_context7_context7__query-docs",
+                "tool_input": {"library": "react"}}, "allow"),
+              # fixture key split so secret scanners never match this source line
+              ({"tool_name": "Write", "tool_input": {"file_path": "src/pay.ts",
+                "content": "const k='" + "sk_live_" + "4eC39HqLyjWDarjtT1zdp7dc00'"}}, "deny"),
+              ({"tool_name": "Write", "tool_input": {"file_path": ".env.production",
+                "content": "X=1"}}, "ask"),
+              ({"tool_name": "Edit", "tool_input": {"file_path": "src/x.ts",
+                "old_string": "a", "new_string": "b"}}, "allow"),
+          ]
+          failures = []
+          for payload, expected in cases:
+              got = decision(payload)
+              tag = "ok " if got == expected else "FAIL"
+              print(f"{tag} [{expected:>5} expected, got {got:>5}]  {payload['tool_name']}")
+              if got != expected:
+                  failures.append((payload["tool_name"], expected, got))
+          if failures:
+              sys.exit(f"\n{len(failures)} stdin smoke case(s) wrong: {failures}")
+          print("\nstdin smoke: all decisions correct.")
+
+      - name: Smoke-test the launcher shim (real registered command; skips broken interpreters)
+        shell: bash
+        run: |
+          set -eu
+          # Pull the REAL launcher command out of hooks.json (no copy to drift) and
+          # run it exactly as Claude Code would: CLAUDE_PLUGIN_ROOT set, a JSON
+          # payload on stdin, a deny decision expected back. This covers the one
+          # component the Python batteries can't reach: the sh shim itself.
+          cmd="$(python -c 'import json; print(json.load(open("hooks/hooks.json"))["hooks"]["PreToolUse"][0]["hooks"][0]["command"])')"
+          export CLAUDE_PLUGIN_ROOT="$PWD"
+          payload='{"tool_name":"Bash","tool_input":{"command":"git commit -m x"}}'
+          out="$(printf '%s' "$payload" | bash -c "$cmd")"
+          case "$out" in
+            *'"permissionDecision": "deny"'*) ;;
+            *) echo "shim did not deny: $out"; exit 1;;
+          esac
+
+          # The Windows Store-stub trap, simulated on every OS: python3/python
+          # exist on PATH but only print an error and exit non-zero (exactly what
+          # the Microsoft Store aliases do on stock Windows 11); only `py` really
+          # runs. A probe that merely checks existence (`command -v`) execs the
+          # stub and the rails go silently dark — the shim must skip the fakes
+          # and still arm via the working interpreter behind them.
+          real="$(command -v python3 || command -v python)"
+          stub="$(mktemp -d)"
+          printf '#!/bin/sh\necho "Python was not found" >&2\nexit 49\n' > "$stub/python3"
+          cp "$stub/python3" "$stub/python"
+          printf '#!/bin/sh\nexec "%s" "$@"\n' "$real" > "$stub/py"
+          chmod +x "$stub/python3" "$stub/python" "$stub/py"
+          out="$(printf '%s' "$payload" | PATH="$stub:$PATH" bash -c "$cmd")"
+          case "$out" in
+            *'"permissionDecision": "deny"'*) ;;
+            *) echo "shim was trapped by stub interpreters: $out"; exit 1;;
+          esac
+          echo "launcher shim smoke: real registered command denies; stub interpreters skipped."
+
+  all-green:
+    name: all-green
+    needs: guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All guardrails matrix jobs passed."

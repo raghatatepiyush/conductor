@@ -1,0 +1,58 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'for c in python3 python py; do \"$c\" -c pass </dev/null >/dev/null 2>&1 && exec \"$c\" \"$0\"; done; exit 0' \"${CLAUDE_PLUGIN_ROOT}/hooks/session_doctrine.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'for c in python3 python py; do \"$c\" -c pass </dev/null >/dev/null 2>&1 && exec \"$c\" \"$0\"; done; exit 0' \"${CLAUDE_PLUGIN_ROOT}/hooks/guardrails.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'for c in python3 python py; do \"$c\" -c pass </dev/null >/dev/null 2>&1 && exec \"$c\" \"$0\"; done; exit 0' \"${CLAUDE_PLUGIN_ROOT}/hooks/guardrails.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'for c in python3 python py; do \"$c\" -c pass </dev/null >/dev/null 2>&1 && exec \"$c\" \"$0\"; done; exit 0' \"${CLAUDE_PLUGIN_ROOT}/hooks/guardrails.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'for c in python3 python py; do \"$c\" -c pass </dev/null >/dev/null 2>&1 && exec \"$c\" \"$0\"; done; exit 0' \"${CLAUDE_PLUGIN_ROOT}/hooks/stop_gate.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

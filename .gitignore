@@ -1,0 +1,7 @@
+# Python (hook scripts are stdlib-only; no build artifacts should be tracked)
+__pycache__/
+*.py[cod]
+
+# OS cruft
+.DS_Store
+Thumbs.db

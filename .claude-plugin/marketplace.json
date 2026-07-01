@@ -1,0 +1,13 @@
+{
+  "name": "conductor",
+  "owner": {
+    "name": "Piyush"
+  },
+  "plugins": [
+    {
+      "name": "conductor",
+      "source": "./",
+      "description": "A safety-railed orchestration layer for Claude Code: frames any task, plans behind an approval gate, routes each step to the best specialist plugin (or a built-in fallback), tests and security-reviews every change, and stages the result for the human to ship. Hook-enforced rails: never commits or pushes, never touches production — even under skip-permissions. (The rails arm via Python 3; the SessionStart banner is your proof they're live.)"
+    }
+  ]
+}
