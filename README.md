@@ -30,6 +30,8 @@ Ringmaster auto-triggers: it frames the task, shows a short plan, waits for your
 | :-- | :-- |
 | `/ringmaster:orchestrator` | invoke it explicitly |
 | `pickup` (or `/ringmaster:pickup`) | resume unfinished work from a previous session — even a teammate's |
+| `/ringmaster:test-architect` | go straight to the Test Architect — plan, write, run, or prune tests without a full build |
+| `/ringmaster:ownership-review` | run just the ownership review on a branch/PR you must sign off on |
 | "go deep" | a one-off exhaustive pass: wider tests, an explicit security sweep, harder review |
 
 ## What you get
