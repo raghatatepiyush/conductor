@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Ringside — coverage report generator (stdlib only, cross-platform).
+"""Scenario coverage report generator (stdlib only, cross-platform).
 
-Reads a Ringside *scenario JSON* (schema documented in
-skills/test-architect/references/requirements-first-scenarios.md #8) and renders:
+Reads a *scenario JSON* (schema documented in
+skills/scenarios-from-requirements/references/requirements-first-scenarios.md #8) and renders:
 
-  * ringside-report.html  — a self-contained, theme-aware page a person with zero
+  * scenario-report.html  — a self-contained, theme-aware page a person with zero
                             Jira context can read: a headline verdict, summary
                             tiles, coverage-by-requirement (with THIN / UNCOVERED
                             flags), the full traceable scenario list, and the gaps
                             & recorded assumptions.
-  * ringside-matrix.csv    — the requirement -> scenario -> coverage matrix,
+  * scenario-matrix.csv    — the requirement -> scenario -> coverage matrix,
                             re-importable into Jira / a spreadsheet.
 
 Security posture: every piece of ticket-sourced text is treated as UNTRUSTED and
@@ -19,7 +19,7 @@ browser. The CSV neutralizes formula-injection. The generator reads only the
 scenario JSON — it never touches secrets.
 
 Usage:
-    python ringside_report.py <scenarios.json> [--out <dir>]
+    python scenario_report.py <scenarios.json> [--out <dir>]
 """
 import csv
 import html
@@ -39,12 +39,12 @@ except Exception:
 
 # Enum vocabularies — kept in lock-step with the scenario-JSON schema (reference #8).
 VALID_PRIORITIES = ("P1", "P2", "P3")
-VALID_SOURCES = ("jira", "user", "ringside")
+VALID_SOURCES = ("jira", "user", "derived")
 VALID_CATEGORIES = (
     "happy", "boundary", "failure", "state",
     "concurrency", "security", "a11y", "perf",
 )
-# Ringside is satisfied with a requirement only when it is exercised on BOTH a
+# A requirement is satisfied only when it is exercised on BOTH a
 # happy path AND a failure path — failure paths are where real incidents hide, so
 # a failure gap is a red flag even when boundaries are covered. Boundary coverage
 # is tracked and shown, but its absence alone is advisory, not a THIN trigger.
@@ -153,7 +153,7 @@ def coverage_by_requirement(data):
 
     thin      = has scenarios but is missing a core dimension — a happy path
                 and/or a failure path (`missing` names which). A failure-path gap
-                is a Ringside red flag even when boundaries are covered, because
+                is a red flag even when boundaries are covered, because
                 failure paths are where real incidents hide.
     uncovered = no scenarios at all.
     """
@@ -312,10 +312,10 @@ def render_html(data):
     n_thin = sum(1 for c in cov.values() if c["thin"])
     n_unc = sum(1 for c in cov.values() if c["uncovered"])
 
-    # Ringside's headline verdict — never satisfied until the edges are covered.
+    # The headline verdict — never satisfied until the edges are covered.
     if n_unc:
         vclass = "bad"
-        vtext = ("%d requirement%s left UNCOVERED — Ringside will not sign off on this."
+        vtext = ("%d requirement%s left UNCOVERED — not ready to sign off."
                  % (n_unc, "s" if n_unc != 1 else ""))
     elif n_thin:
         vclass = "thin"
@@ -324,8 +324,8 @@ def render_html(data):
                  % (n_thin, "s" if n_thin != 1 else ""))
     elif requirements:
         vclass = "ok"
-        vtext = ("Every requirement carries boundary and failure coverage. "
-                 "Ringside is, grudgingly, satisfied.")
+        vtext = ("Every requirement carries boundary and failure coverage — "
+                 "the edges are covered.")
     else:
         vclass = "thin"
         vtext = "No requirements read from the source of truth yet."
@@ -334,13 +334,13 @@ def render_html(data):
     p.append("<!doctype html>")
     p.append('<html lang="en"><head><meta charset="utf-8">')
     p.append('<meta name="viewport" content="width=device-width, initial-scale=1">')
-    p.append("<title>Ringside coverage — %s</title>" % _esc(meta.get("project", "")))
+    p.append("<title>Scenario coverage — %s</title>" % _esc(meta.get("project", "")))
     p.append("<style>%s</style></head><body>" % _STYLE)
     p.append('<div class="wrap">')
 
     # Masthead
     p.append('<header class="masthead">')
-    p.append('<div class="brand"><span class="ring">&#9673;</span> Ringside</div>')
+    p.append('<div class="brand"><span class="ring">&#9673;</span> Scenario Coverage</div>')
     p.append('<p class="eyebrow" style="margin:14px 0 0">'
              "Test Architect &middot; requirements-first coverage</p>")
     p.append("<h1>Coverage report &mdash; %s</h1>" % _esc(meta.get("project", "—")))
@@ -436,9 +436,9 @@ def render_html(data):
             p.append("</ul>")
         p.append("</section>")
 
-    p.append('<footer>Generated by <b>Ringside</b> — the Test Architect in requirements-first '
-             "mode. Every scenario traces to a requirement in the source of truth. Nothing here "
-             "trusts the code the developers wrote — it is what the ticket says must be true.</footer>")
+    p.append('<footer>Generated by the <b>scenarios-from-requirements</b> skill. Every scenario '
+             "traces to a requirement in the source of truth. Nothing here trusts the code the "
+             "developers wrote — it is what the ticket says must be true.</footer>")
     p.append("</div></body></html>")
     return "\n".join(p)
 
@@ -497,8 +497,8 @@ def render_csv(data):
 def write_report(data, out_dir):
     """Write both report files into out_dir; return (html_path, csv_path)."""
     os.makedirs(out_dir, exist_ok=True)
-    html_path = os.path.join(out_dir, "ringside-report.html")
-    csv_path = os.path.join(out_dir, "ringside-matrix.csv")
+    html_path = os.path.join(out_dir, "scenario-report.html")
+    csv_path = os.path.join(out_dir, "scenario-matrix.csv")
     with open(html_path, "w", encoding="utf-8", newline="") as fh:
         fh.write(render_html(data))
     with open(csv_path, "w", encoding="utf-8", newline="") as fh:
@@ -507,7 +507,7 @@ def write_report(data, out_dir):
 
 
 def main(argv):
-    """CLI: ringside_report.py <scenarios.json> [--out <dir>]. Returns an exit code."""
+    """CLI: scenario_report.py <scenarios.json> [--out <dir>]. Returns an exit code."""
     path = None
     out_dir = "."
     i = 0
@@ -527,7 +527,7 @@ def main(argv):
         i += 1
 
     if not path:
-        print("usage: ringside_report.py <scenarios.json> [--out <dir>]", file=sys.stderr)
+        print("usage: scenario_report.py <scenarios.json> [--out <dir>]", file=sys.stderr)
         return 2
     try:
         with open(path, encoding="utf-8") as fh:
@@ -540,7 +540,7 @@ def main(argv):
 
     errs = validate(data)
     if errs:
-        print("Ringside: %d problem(s) in the scenario JSON — fix these first:" % len(errs),
+        print("Scenario report: %d problem(s) in the scenario JSON — fix these first:" % len(errs),
               file=sys.stderr)
         for e in errs:
             print("  - %s" % e, file=sys.stderr)
@@ -551,7 +551,7 @@ def main(argv):
     except Exception as exc:  # defense in depth — a validated doc should never reach here
         print("error: failed to render report: %s" % exc, file=sys.stderr)
         return 2
-    print("Ringside report written:")
+    print("Scenario coverage report written:")
     print("  HTML: %s" % html_path)
     print("  CSV:  %s" % csv_path)
     return 0

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Ringmaster — battery for the Ringside report generator (stdlib only).
+"""Ringmaster — battery for the scenario coverage report generator (stdlib only).
 
 Mirrors the hooks/test_*.py suites: no third-party deps, cross-platform, and it
-asserts the load-bearing promises of skills/test-architect/assets/ringside_report.py
+asserts the load-bearing promises of skills/scenarios-from-requirements/assets/scenario_report.py
 — schema validation, coverage/thin detection, HTML-escaping of untrusted ticket
 text (XSS), correct CSV quoting, and the CLI exit codes.
 """
@@ -19,12 +19,12 @@ except Exception:
     pass
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import ringside_report as rr  # noqa: E402
+import scenario_report as rr  # noqa: E402
 
 
 def _valid_data():
     return {
-        "meta": {"project": "acme", "tracker": "jira", "persona": "Ringside",
+        "meta": {"project": "acme", "tracker": "jira", "persona": "scenarios-from-requirements",
                  "generatedAt": "2026-07-06T00:00:00Z"},
         "requirements": [
             {"id": "PROJ-1/AC1", "sourceRef": "JIRA:PROJ-1", "origin": "jira",
@@ -48,7 +48,7 @@ def _valid_data():
              "given": "a member with balance 100.00", "when": "they withdraw 100.01",
              "then": "the request is rejected as insufficient funds",
              "testType": "api", "priority": "P1", "risk": "high",
-             "source": "ringside", "edgeCase": True, "category": "boundary",
+             "source": "derived", "edgeCase": True, "category": "boundary",
              "assumptionBased": False},
         ],
     }
@@ -238,7 +238,7 @@ class RobustnessTests(unittest.TestCase):
         d["assumptions"] = [None]
         d["meta"] = None
         out = rr.render_html(d)  # must not raise
-        self.assertIn("Ringside", out)
+        self.assertIn("Scenario Coverage", out)
 
 
 class WriteAndCliTests(unittest.TestCase):
@@ -265,8 +265,8 @@ class WriteAndCliTests(unittest.TestCase):
         out = os.path.join(self.tmp, "out")
         rc = rr.main([p, "--out", out])
         self.assertEqual(rc, 0)
-        self.assertTrue(os.path.isfile(os.path.join(out, "ringside-report.html")))
-        self.assertTrue(os.path.isfile(os.path.join(out, "ringside-matrix.csv")))
+        self.assertTrue(os.path.isfile(os.path.join(out, "scenario-report.html")))
+        self.assertTrue(os.path.isfile(os.path.join(out, "scenario-matrix.csv")))
 
     def test_main_validation_error_returns_one(self):
         d = _valid_data()

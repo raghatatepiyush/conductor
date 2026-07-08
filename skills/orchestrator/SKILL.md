@@ -77,7 +77,8 @@ Dispatch each step to the best **specialist** (full map and invocation details i
 | :-- | :-- | :-- |
 | UI / frontend / components / styling | **frontend-design** plugin | Build it yourself to the design principles; offer to install the plugin |
 | A feature / behavior change | **superpowers** or **feature-dev** workflow | Run the brainstorm→plan→TDD loop yourself |
-| Writing / fixing / pruning **tests** | **Test Architect** (bundled) | — (always present) |
+| Writing / fixing / pruning **tests** (from code) | **Test Architect** (bundled) | — (always present) |
+| Test **scenarios** from a requirement / Jira ticket (before code) | **scenarios-from-requirements** (bundled) | — (always present) |
 | Browser / end-to-end runs | **playwright** plugin | Use the project's existing e2e runner |
 | Database / schema / queries / auth | **supabase** plugin (or detected DB) | Use the project's DB tooling + migrations |
 | Payments / billing / checkout | **stripe** plugin | Use the project's payment SDK against test mode |
