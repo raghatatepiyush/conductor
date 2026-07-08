@@ -44,11 +44,10 @@ Ringmaster wakes up on its own, restates the goal, shows a short plan, waits for
 
 | Say | What happens |
 | :-- | :-- |
-| *(just describe your task)* | Ringmaster frames it, plans it, waits for your **"go,"** then builds — testing, security-gating, and staging as it goes |
 | `/ringmaster:orchestrator` | summon the orchestrator explicitly |
 | `/ringmaster:test-architect` | go straight to writing, fixing, or pruning tests **for existing code** |
 | `/ringmaster:scenarios-from-requirements` | write requirements-first test **scenarios** from a Jira/Confluence ticket — *before* any code (or just say *"write test scenarios for PROJ-142"*) |
-| `pickup` (or `/ringmaster:pickup`) | resume unfinished work from a previous session — even a teammate's |
+| `/ringmaster:pickup` | resume unfinished work from a previous session — even a teammate's |
 | `/ringmaster:ownership-review` | run just the ownership review on a branch/PR you must sign off on |
 | `"go deep"` | a one-off exhaustive pass: wider tests, an explicit security sweep, harder review |
 
@@ -67,7 +66,7 @@ Every part of Ringmaster has **one clear job**. Here's who does what — and why
 | 🎟️ **Scenarios from Requirements** | The **requirements-first** sibling of the Test Architect. Reads a Jira/Confluence ticket (your source of truth), grills it for gaps, and writes brutally thorough, fully-traceable **scenarios** — plus a self-contained HTML/CSV coverage report — *before* any code exists. **Test Architect goes `code → tests`; this goes `requirement → scenarios → tests`.** Built for BAs & Test Analysts who trust the spec and distrust the code. | `skill` · `/ringmaster:scenarios-from-requirements` |
 | 🔒 **Security Gate** | Before a risky change leaves your machine, a fresh, paranoid reviewer reads the diff for secrets, injection, broken authorization, and crypto misuse — and **blocks the hand-off** on anything critical. **Catches the one bug everyone else was too close to see.** | `agent` · auto-dispatched before staging |
 | ✍️ **Ownership Review** | A short quiz built from your **actual diff** that proves *you* understand the change before you sign off — you answer first, it teaches on every miss, and flags where you were *confidently wrong*. Records an auditable sign-off a `Stop` hook enforces. **Turns "the AI wrote it" into "I understand it and I own it."** | `skill` · `/ringmaster:ownership-review` |
-| 🗂️ **Ledger + pickup** | A tiny team board (the `.ringmaster/` folder) tracking every task as **pending · in-progress · done · blocked**, each with an owner and its dependencies. **Any session — or a teammate — resumes exactly where the last one stopped.** | `command` · `pickup` or `/ringmaster:pickup` |
+| 🗂️ **Ledger + resume** | A tiny team board (the `.ringmaster/` folder) tracking every task as **pending · in-progress · done · blocked**, each with an owner and its dependencies. **Any session — or a teammate — resumes exactly where the last one stopped.** | `command` · `/ringmaster:pickup` |
 
 ### Also under the tent
 

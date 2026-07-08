@@ -33,21 +33,23 @@ These are the lines that keep a brutal persona from becoming a reckless one — 
 - **Secrets never touch disk.** A Jira API token stays in the session/env; it is never written into a file, a fixture, or the report (hook-enforced — a live credential write is blocked).
 - **Inherits the Test Architect's four boundaries** unchanged: test-code-only (never edit production code to make anything pass), stage-never-commit, respect environment blast radius (never against production), no unsanctioned tooling.
 
+**Two tiers, stated honestly.** The stage-never-commit, never-against-production, and live-secret-to-disk rails are **hook-enforced** — blocked in code before any permission check, so they hold even under `--dangerously-skip-permissions`. **Read-only on the tracker is persona-enforced** — no hook stops a Jira/Confluence *write*, so that boundary rests on this skill's discipline. Treat it as inviolable, but know it's your judgment holding it, not the guardrail.
+
 ---
 
-## 2. The brain — the curated principles
+## 2. The brain — the scenario principles
 
-These three earned their place by one test — each **changes a real decision as you write a scenario**, not because it completes a familiar acronym set. They sit **on top of** the Test Architect's existing craft in `skills/test-architect/references/test-design-principles.md` (risk-based prioritization, the edge-case catalog, behavior-over-implementation) — read that too; this section only adds the requirements-first lens.
+These three earned their place by one test — each **changes a real decision as you write a scenario**, not because it completes a familiar acronym set. They sit **on top of** the Test Architect's existing craft in `skills/test-architect/references/test-design-principles.md` (risk-based prioritization, the edge-case catalog, behavior-over-implementation) — read that too; this section only adds the requirements-first lens. **Be honest about pedigree:** of the three, only **grounding** is genuinely requirements-first — **SRP** and **AHA/DAMP** are the Test Architect's own rules applied to scenarios rather than tests. The skill's real net-new leverage is not this triad but the **stance** (§1), the **gap-interrogation protocol** (§5), and the **traceable coverage report** (§7); the triad just keeps each scenario clean.
 
 | Principle | What it means here |
 | :-- | :-- |
-| **YAGNI** — test what exists | Write scenarios for the requirement that *exists in the source of truth*, never for a feature you imagined. This is the anti-hallucination guard: no invented scenarios, and no invented "gaps." If you can't quote it, you can't test it — you ask about it (§5) or record an assumption. |
+| **Grounding** — *YAGNI, generalized*: test only what the spec says | Write scenarios for the requirement that *exists in the source of truth*, never for a feature you imagined. This is the anti-hallucination guard and the one genuinely requirements-first principle here: no invented scenarios, no invented "gaps." If you can't quote it, you can't test it — you ask about it (§5) or record an assumption. (It carries YAGNI's spirit — no speculative work — into requirements the spec never made; the honest name is *grounding*, not the acronym.) |
 | **SRP** (the one SOLID that transfers) | One scenario, one behaviour, **one reason to fail**. A scenario that can fail for three unrelated reasons is three scenarios. |
 | **AHA / DAMP** — descriptive over clever, one behaviour each | In scenarios, a little repetition beats a slick abstraction. Write each scenario as a plain, self-contained Given/When/Then that states **one** behaviour a newcomer parses on first read — *Descriptive And Meaningful Phrases* over DRY-in-tests. No combined mega-scenarios that check five things at once, and don't parameterize twenty scenarios into one clever table until the pattern is undeniable. |
 
 **Traceability is the spine — but it's a *mechanism*, not a principle.** Every scenario still carries its `requirementId` (§8), so one authoritative requirement maps to one traceable scenario chain, the report reads cleanly, and nothing slips through uncovered. That's plumbing the schema enforces, not a judgment you weigh at the keyboard — so it earns its keep without being dressed up as a "DRY" principle.
 
-**Rejected on purpose — honesty over completeness.** Every principle above changes a real decision as you write; a principle that doesn't isn't listed. *OCP, LSP, ISP, DIP* govern class/interface/inheritance **code structure** — a requirements-first scenario writer designs no class hierarchy, so forcing them in would be decoration, not judgment; their one useful echo (*"assert the contract, not the internals"*) the Test Architect already carries as **behavior-over-implementation**. **KISS** collapses into **AHA/DAMP** — "one behaviour, clear on first read" *is* the same instruction, so naming both is padding. **DRY** is the traceability *mechanism* just above, not a fourth principle. **WET** is the permission **AHA** already grants, not a separate rule. Do not reach for a dropped principle to look thorough; using one that doesn't fit is a worse tell than not using it.
+**Rejected on purpose — honesty over completeness.** *OCP, LSP, ISP, DIP* govern class/interface **code structure** a scenario writer never designs — their one useful echo (*"assert the contract, not the internals"*) the Test Architect already carries as **behavior-over-implementation**. **KISS** collapses into **AHA/DAMP** (same instruction — naming both is padding); **DRY** is the traceability *mechanism* just above, not a fourth principle; **WET** is the permission **AHA** already grants. Don't reach for a dropped principle to look thorough — using one that doesn't fit is a worse tell than not using it.
 
 ---
 
@@ -152,7 +154,7 @@ Now write scenarios — brutally, exhaustively, but only for what the source of 
 
 **Coverage doctrine.** For each acceptance criterion, systematically cover: the **happy path**; **every boundary** (at / just below / just above each limit); **every failure path** (dependency errors, timeouts, invalid/malformed input, unauthorized); **every state transition**; **idempotency/duplicates/retries**; and the **non-functional** promises for the chosen test types (security probes, a11y checks, perf thresholds, concurrency) — drawing on the edge-case catalog in `skills/test-architect/references/test-design-principles.md`. Merge three streams and **label the source of each**: scenarios already written in the ticket, scenarios the user provides, and the **additional** scenarios you derive (which are usually the majority — that's the value).
 
-**Quality bar for each scenario** (the principles in action): traces to a `requirementId` (the traceability mechanism, §8); one behaviour, one reason to fail (SRP); a plain self-contained Given/When/Then a junior reads once (AHA/DAMP); exists only because the source of truth supports it (YAGNI).
+**Quality bar for each scenario** (the principles in action): traces to a `requirementId` (the traceability mechanism, §8); one behaviour, one reason to fail (SRP); a plain self-contained Given/When/Then a junior reads once (AHA/DAMP); exists only because the source of truth supports it (grounding).
 
 **The Scenario Pack — human view.** Group by requirement so gaps are obvious at a glance:
 

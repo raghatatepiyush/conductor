@@ -28,6 +28,8 @@ Inherit the **Test Architect's four boundaries** unchanged, plus two that requir
 5. **Read-only on the tracker.** Read Jira/Confluence; never edit, transition, comment on, or close a ticket unless the user *explicitly* asks. The CSV export is the only sanctioned write-back — and only the human does it.
 6. **Secrets never touch disk.** A Jira API token stays in the session/env; it is never written to a file, a fixture, or the report (hook-enforced — a live-credential write is blocked).
 
+**Know which net is under you.** Rails 1–2, rail 3 (production), and the live-secret half of rail 6 are **hook-enforced** — blocked in code before any permission check, so they hold even under `--dangerously-skip-permissions`. **Rail 5 (read-only tracker) is persona-enforced** — no hook stops a Jira/Confluence *write*, so it rests on this skill's discipline, not the guardrail. Hold it as inviolable anyway; just never mistake a soft rail for a hard one.
+
 ---
 
 ## The flow — four phases, each halts for you
@@ -45,13 +47,13 @@ The full playbook lives in **`references/requirements-first-scenarios.md`** — 
 
 ## The scenario brain
 
-Three curated principles — each earns its place only because it **changes a real decision as you write a scenario**:
+Three principles govern how each scenario is written — and be honest about their pedigree: **only one (grounding) is genuinely requirements-first; the other two are the Test Architect's craft restated in scenario terms**, because a scenario is a pre-test. Each still earns its place by **changing a real decision as you write**:
 
-- **YAGNI** — write scenarios for the requirement that *exists in the source of truth*, never for a feature you imagined. The anti-hallucination guard: if you can't quote it, you can't test it — you ask about it, or record an assumption.
-- **SRP** — one scenario, one behaviour, **one reason to fail**. A scenario that can fail for three unrelated reasons is three scenarios.
-- **AHA / DAMP** — a plain, self-contained Given/When/Then a junior reads once; no clever mega-scenarios that check five things at a time.
+- **Grounding — *YAGNI, generalized*** — write a scenario only for a requirement that *exists in the source of truth*, never one you imagined. This is the anti-hallucination guard and the one genuinely new principle here: if you can't quote it, you can't test it — you ask, or record an assumption. (It carries YAGNI's spirit — no speculative work — from "code you don't need yet" to "requirements the spec never made"; the honest name is *grounding*, not the acronym.)
+- **SRP** — one scenario, one behaviour, **one reason to fail**. A scenario that can fail for three unrelated reasons is three scenarios. *(The Test Architect's one-behaviour rule, in scenario form.)*
+- **AHA / DAMP** — a plain, self-contained Given/When/Then a junior reads once; no clever mega-scenarios that check five things at a time. *(Also the Test Architect's craft, restated.)*
 
-Traceability (every scenario carries its `requirementId`) is a schema-enforced **mechanism**, not a badged principle. The full reasoning — and the principles honestly rejected — is in the playbook, §2.
+Traceability (every scenario carries its `requirementId`) is a schema-enforced **mechanism**, not a badged principle. The skill's genuinely new leverage lives in the **requirements-first stance**, the **gap-interrogation protocol**, and the **traceable coverage report** — not in this triad, which just keeps each scenario clean. Full reasoning — and the principles honestly rejected — is in the playbook, §2.
 
 ---
 
@@ -63,6 +65,6 @@ Read the ticket and its linked pages, not the whole tracker. Read each reference
 
 ## Reference files
 
-- **`references/requirements-first-scenarios.md`** — the full playbook: the requirements-first stance and its reasoning loop, the connection-agnostic read-only tracker adapter (Atlassian MCP → REST token → manual paste), the gap-interrogation protocol, the three curated principles (and the ones honestly rejected), the Scenario Pack + scenario-JSON schema, and the HTML/CSV coverage report generator (`assets/scenario_report.py`). **Read when this skill fires.**
+- **`references/requirements-first-scenarios.md`** — the full playbook: the requirements-first stance and its reasoning loop, the connection-agnostic read-only tracker adapter (Atlassian MCP → REST token → manual paste), the gap-interrogation protocol, the three scenario principles (and the ones honestly rejected), the Scenario Pack + scenario-JSON schema, and the HTML/CSV coverage report generator (`assets/scenario_report.py`). **Read when this skill fires.**
 - The **Test Architect**'s craft is shared — read it too: `skills/test-architect/references/test-design-principles.md` (the edge-case catalog, behavior-over-implementation) and `skills/test-architect/references/stack-detection.md` (identify the runner across ecosystems).
 - After the scenarios are confirmed, hand off to the **Test Architect** skill (`skills/test-architect/`) for the write→run phases — still red→green, still test-code-only, still never against production.

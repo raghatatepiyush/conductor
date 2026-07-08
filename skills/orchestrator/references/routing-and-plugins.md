@@ -115,11 +115,12 @@ A caveat worth knowing: stdio MCP servers launched via `npx @pkg@latest` can be 
 
 ---
 
-## The three always-present specialists
+## The four always-present specialists
 
 These ship inside Ringmaster — available on every project with zero install, the backbone the rails lean on:
 
-- **Test Architect** (`skills/test-architect/`) — all test craft: risk-based design, red→green TDD, behavior-not-implementation assertions, determinism, pruning stale tests, pretty final report. Route *every* test step here.
+- **Test Architect** (`skills/test-architect/`) — all test craft: risk-based design, red→green TDD, behavior-not-implementation assertions, determinism, pruning stale tests, pretty final report. Route *every* test-from-code step here.
+- **Scenarios from Requirements** (`skills/scenarios-from-requirements/`) — the requirements-first sibling of the Test Architect: reads a Jira/Confluence (or Trello/Linear/Azure DevOps/GitHub Issues) source of truth through a read-only adapter, interrogates it for genuine gaps, and writes brutally thorough, fully-traceable **scenarios** (with a security-hardened HTML/CSV coverage report) *before* any code — then hands them to the Test Architect for the write→run phases. Route here when the job starts from a **requirement**, not from code.
 - **Security Gate** (`agents/security-gate.md`) — a fresh-context adversarial reviewer dispatched on the working diff before staging. Hunts secrets, injection, broken authz, crypto misuse, dependency risk; **blocks on critical**; reports defects but never fixes them; never commits.
 - **Ownership Review** (`skills/ownership-review/`, driving `agents/comprehension.md`) — where the two above ask "is the code correct and safe?", this asks "does the human about to take 100% responsibility actually understand it?" It reconstructs understanding through an **answer-first** comprehension quiz grounded in the real diff, teaches every hole in plain language, calibrates the developer's confidence against how they truly did, and records an **auditable ownership sign-off** (`gate.owned`) the Stop hook enforces. Route to it in stage 3 for any change someone must own; it reuses (never rebuilds) the detection above.
 
