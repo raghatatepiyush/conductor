@@ -2,6 +2,29 @@
 
 All notable changes to Ringmaster. Versions follow [semver](https://semver.org/); the format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.6.0] — 2026-07-09
+
+**A bundled two-axis Code Review — the review layer Ringmaster always assumed but never shipped.** The orchestrator and the Ownership Review both route through a "code-review" step, and `gate.clean` has always been one of the six A-grade criteria — yet the only built-in version was a prose two-stage block. This release makes it a real, always-present specialist, adopting the parallel-sub-agent technique surfaced by a Ringside market scan (`mattpocock/skills`) and fitting it to Ringmaster's own architecture (a skill orchestrates; a fresh-context agent does the isolated work).
+
+### Added
+
+- **A new bundled `code-review` skill** (`skills/code-review/`, invoked as `/ringmaster:code-review`) and its **`code-reviewer` agent** (`agents/code-reviewer.md`). The skill pins the diff and the plan/spec, risk-tiers the change, then dispatches the reviewer **twice in parallel, in fresh contexts** — once on the **Spec** axis (does the change match the plan/ticket, no more, no less?) and once on the **Standards** axis (is the code correct, safe on its edges, and conventional?) — so the two lenses never pollute each other. It aggregates both into the house two-stage report and records the **`gate.clean`** criterion the Stop hook already enforces. It reuses the Security Gate's severity scale (any 🔴 on either axis blocks hand-off), inherits the read-only / never-fix / never-commit rails, and degrades honestly when sub-agents or a ledger aren't available (single-context pass; review real but not hook-enforced).
+
+### Changed
+
+- **`code-review` is now the fifth always-present bundled specialist** (Test Architect · Scenarios · Security Gate · **Code Review** · Ownership Review). The orchestrator's routing table and stage-3 review step now route to the bundled skill by default; the external `code-review` plugin becomes an optional richer pass Ringmaster prefers when installed. `references/routing-and-plugins.md` (map row + the always-present list, now **five**), `references/output-style.md` (the two-stage block re-titled as the skill's report format, its stages labelled Spec / Standards), `references/workflow-playbooks.md` (the review step now routes to the bundled skill, not a "fallback" pass), and `skills/ownership-review/SKILL.md` (its Stage-1 detection reference) were updated to match.
+- **No Python changed.** `gate.clean` was already a universal A-grade criterion (`hooks/ledger.py`, `hooks/stop_gate.py`, `hooks/routing.py`), so this graft is documentation + skill/agent definitions only; every existing hook battery is untouched.
+- **Docs accuracy.** `docs/hardening.md` now enumerates all five batteries (guardrails · ledger · routing · Stop-gate · report-generator — **274 cases**) in both its CI description and its local-run snippet; `.claude-plugin/marketplace.json`'s description now names the code-review and ownership layers.
+
+## [2.5.0] — 2026-07-08
+
+**`scenarios-from-requirements` — requirements-first test scenarios.** A new standalone skill for the people who own product quality (BAs, Test Analysts): it trusts the *requirement* and distrusts the *code*. It's the sibling of the Test Architect — where the Test Architect goes *code → tests*, this goes *requirement → scenarios → tests*.
+
+### Added
+
+- **A new `scenarios-from-requirements` skill** (`skills/scenarios-from-requirements/`, invoked as `/ringmaster:scenarios-from-requirements`), the requirements-first sibling of the Test Architect. It reads a Jira/Confluence (or Trello/Linear/Azure DevOps/GitHub Issues) ticket through a connection-agnostic, read-only adapter (Atlassian MCP → REST token → manual paste), **interrogates it for genuine gaps** with grounded, YAGNI-guarded questions, then writes brutally thorough, fully-traceable test **scenarios** (edge cases included) *before* any test code — handing the confirmed scenarios to the Test Architect for the write→run phases. Its scenario brain runs on three principles (grounding — *YAGNI generalized* — · SRP · AHA/DAMP), honest about pedigree: grounding is the one genuinely requirements-first principle, while SRP and AHA/DAMP are the Test Architect's craft restated for scenarios; requirement→scenario traceability is enforced by the schema, and it deliberately rejects the principles that don't fit requirements-first design. Full playbook in the skill's `references/requirements-first-scenarios.md`.
+- **A tested HTML + CSV coverage report generator** (`skills/scenarios-from-requirements/assets/scenario_report.py`, stdlib-only) that renders a self-contained, theme-aware HTML report and a re-importable requirement→scenario→coverage CSV — HTML-escaping untrusted ticket text, neutralizing CSV formula injection, and flagging any requirement missing failure-path coverage as **thin**. Ships with a **34-case battery** (`test_scenario_report.py`) and cleared the bundled Security Gate before staging.
+
 ## [2.4.0] — 2026-07-05
 
 **The rename to Ringmaster.** The plugin's marketplace `name` collided with an existing community plugin of the same former name, so submissions showed *Published* but never synced into `marketplace.json`. Renaming to the unique, on-theme **`ringmaster`** — the one who runs the whole show and cues each act — resolves the collision: same tool, same rails, new name, verified clear in the community marketplace.
